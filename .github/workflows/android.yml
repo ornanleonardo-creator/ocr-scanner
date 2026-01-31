@@ -1,4 +1,4 @@
-name: OCR Scanner - NO COMMENT BUG
+name: OCR Scanner - Gradle 8 Fix
 
 on:
   push:
@@ -13,42 +13,77 @@ jobs:
     - name: 📥 Checkout
       uses: actions/checkout@v4
       
-    - name: 🗑️ Remove bad build.gradle
+    - name: 🔧 Fix Gradle 8 configuration
       run: |
-        echo "🗑️ Suppression du mauvais build.gradle..."
-        rm -f build.gradle
+        echo "🔧 Configuration pour Gradle 8..."
         
-    - name: 📝 Create CORRECT build.gradle
-      run: |
-        echo "📝 Création du BON build.gradle..."
-        # Pas de commentaire "#" au début !
-        echo '// build.gradle - Version correcte' > build.gradle
-        echo '' >> build.gradle
-        echo 'buildscript {' >> build.gradle
-        echo '    repositories {' >> build.gradle
-        echo '        google()' >> build.gradle
-        echo '        mavenCentral()' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '    dependencies {' >> build.gradle
-        echo '        classpath "com.android.tools.build:gradle:8.1.0"' >> build.gradle
-        echo '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '}' >> build.gradle
-        echo '' >> build.gradle
-        echo 'allprojects {' >> build.gradle
-        echo '    repositories {' >> build.gradle
-        echo '        google()' >> build.gradle
-        echo '        mavenCentral()' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '}' >> build.gradle
-        echo '' >> build.gradle
-        echo 'task clean(type: Delete) {' >> build.gradle
-        echo '    delete rootProject.buildDir' >> build.gradle
-        echo '}' >> build.gradle
+        # 1. build.gradle SIMPLE (sans repositories)
+        cat > build.gradle << 'EOF'
+        buildscript {
+            dependencies {
+                classpath 'com.android.tools.build:gradle:8.1.0'
+                classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0'
+            }
+        }
         
-        echo "✅ build.gradle créé"
-        echo "📄 Contenu :"
-        cat build.gradle
+        task clean(type: Delete) {
+            delete rootProject.buildDir
+        }
+        EOF
+        
+        # 2. settings.gradle CORRECT
+        cat > settings.gradle << 'EOF'
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        
+        rootProject.name = "OCRScanner"
+        include ':app'
+        EOF
+        
+        # 3. app/build.gradle de base
+        if [ ! -f "app/build.gradle" ]; then
+          mkdir -p app
+          cat > app/build.gradle << 'APP'
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+          }
+          android {
+              namespace 'com.yourapp.ocrscanner'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.yourapp.ocrscanner"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+          }
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          APP
+        fi
+        
+        echo "✅ Configuration Gradle 8 prête"
         
     - name: ☕ Setup Java
       uses: actions/setup-java@v4
@@ -61,13 +96,12 @@ jobs:
       
     - name: 🧪 Test
       run: |
-        echo "🧪 Test..."
         chmod +x gradlew
         ./gradlew --version
         
     - name: 🏗️ Build
       run: |
-        echo "🚀 Build..."
+        echo "🚀 Build avec Gradle 8..."
         ./gradlew clean assembleDebug
         
     - name: 📦 Upload
