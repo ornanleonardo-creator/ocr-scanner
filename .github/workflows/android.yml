@@ -1,4 +1,4 @@
-name: Build OCR Scanner
+name: Build OCR Scanner APK
 
 on:
   push:
@@ -13,34 +13,10 @@ jobs:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
       
-    - name: 🛠️ Setup project from scratch
+    - name: 🔧 Ensure correct build.gradle
       run: |
-        echo "=== SETUP DU PROJET ==="
-        
-        # 1. Télécharger le VRAI gradlew
-        echo "1. 📥 Téléchargement de gradlew..."
-        curl -sL https://raw.githubusercontent.com/gradle/gradle/master/gradlew -o gradlew
-        chmod 755 gradlew
-        echo "✅ gradlew prêt"
-        ls -la gradlew
-        
-        # 2. Créer la structure Gradle
-        echo ""
-        echo "2. 📁 Création de la structure..."
-        mkdir -p gradle/wrapper
-        
-        # gradle-wrapper.properties
-        cat > gradle/wrapper/gradle-wrapper.properties << 'GRADLE_WRAPPER'
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-8.0-bin.zip
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-        GRADLE_WRAPPER
-        
-        # build.gradle racine si manquant
-        if [ ! -f "build.gradle" ]; then
-          cat > build.gradle << 'ROOT_GRADLE'
+        # S'assurer que build.gradle est correct
+        cat > build.gradle << 'EOF'
         buildscript {
             repositories {
                 google()
@@ -60,84 +36,7 @@ jobs:
         task clean(type: Delete) {
             delete rootProject.buildDir
         }
-        ROOT_GRADLE
-        fi
-        
-        # settings.gradle si manquant
-        if [ ! -f "settings.gradle" ]; then
-          cat > settings.gradle << 'SETTINGS'
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-        dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        rootProject.name = "OCRScanner"
-        include ':app'
-        SETTINGS
-        fi
-        
-        # gradle.properties si manquant
-        if [ ! -f "gradle.properties" ]; then
-          cat > gradle.properties << 'PROPS'
-        org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-        android.useAndroidX=true
-        android.enableJetifier=true
-        kotlin.code.style=official
-        PROPS
-        fi
-        
-        # 3. S'assurer que app/build.gradle existe
-        echo ""
-        echo "3. 📱 Configuration de l'application..."
-        if [ ! -f "app/build.gradle" ]; then
-          mkdir -p app
-          cat > app/build.gradle << 'APP_GRADLE'
-        plugins {
-            id 'com.android.application'
-            id 'org.jetbrains.kotlin.android'
-        }
-        android {
-            namespace 'com.yourapp.ocrscanner'
-            compileSdk 34
-            defaultConfig {
-                applicationId "com.yourapp.ocrscanner"
-                minSdk 24
-                targetSdk 34
-                versionCode 1
-                versionName "1.0"
-            }
-            buildTypes {
-                release {
-                    minifyEnabled false
-                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                }
-            }
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
-            }
-            kotlinOptions {
-                jvmTarget = '17'
-            }
-        }
-        dependencies {
-            implementation 'androidx.core:core-ktx:1.12.0'
-            implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.10.0'
-        }
-        APP_GRADLE
-        fi
-        
-        echo "✅ Structure prête"
+        EOF
         
     - name: ☕ Setup Java 17
       uses: actions/setup-java@v4
@@ -148,61 +47,86 @@ jobs:
     - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: 🧪 Test gradlew
+    - name: 🛠️ Prepare Gradle
       run: |
-        echo "🧪 Test de gradlew..."
-        ./gradlew --version || {
-          echo "❌ gradlew échoue, vérification..."
-          head -20 gradlew
-          echo "Taille : $(wc -l gradlew) lignes"
+        chmod +x gradlew
+        # Tester que Gradle fonctionne
+        ./gradlew --version
+        
+    - name: 🏗️ Build APK with dependencies
+      run: |
+        echo "🚀 Construction avec dépendances..."
+        
+        # Mettre à jour app/build.gradle avec les dépendances nécessaires
+        if [ -f "app/build.gradle" ]; then
+          echo "📝 Mise à jour des dépendances..."
+          # Ajouter CameraX et ML Kit
+          sed -i '/dependencies {/a\    implementation '"'"'androidx.core:core-ktx:1.12.0'"'"'' app/build.gradle
+          sed -i '/dependencies {/a\    implementation '"'"'androidx.appcompat:appcompat:1.6.1'"'"'' app/build.gradle
+          sed -i '/dependencies {/a\    implementation '"'"'com.google.android.material:material:1.10.0'"'"'' app/build.gradle
+          sed -i '/dependencies {/a\    implementation '"'"'androidx.camera:camera-core:1.3.0'"'"'' app/build.gradle
+          sed -i '/dependencies {/a\    implementation '"'"'androidx.camera:camera-camera2:1.3.0'"'"'' app/build.gradle
+          sed -i '/dependencies {/a\    implementation '"'"'androidx.camera:camera-lifecycle:1.3.0'"'"'' app/build.gradle
+          sed -i '/dependencies {/a\    implementation '"'"'androidx.camera:camera-view:1.3.0'"'"'' app/build.gradle
+          sed -i '/dependencies {/a\    implementation '"'"'com.google.mlkit:text-recognition:16.0.0'"'"'' app/build.gradle
+        fi
+        
+        # Build
+        ./gradlew clean assembleDebug --stacktrace
+        
+    - name: 📦 Package APK for upload
+      run: |
+        echo "📦 Préparation de l'APK..."
+        
+        # Chercher l'APK debug
+        APK_PATH=$(find . -path "*/outputs/apk/debug/*.apk" -type f | head -1)
+        
+        if [ -z "$APK_PATH" ]; then
+          # Essayer un autre chemin
+          APK_PATH=$(find . -name "*debug*.apk" -type f | head -1)
+        fi
+        
+        if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
+          echo "✅ APK trouvé: $APK_PATH"
+          echo "📊 Taille: $(du -h "$APK_PATH" | cut -f1)"
+          
+          # Créer un dossier pour l'artifact
+          mkdir -p release
+          cp "$APK_PATH" release/ocr-scanner.apk
+          
+          # Créer un fichier d'info
+          echo "OCR Scanner v1.0" > release/version.txt
+          echo "Build: $(date)" >> release/version.txt
+          echo "APK: $(basename "$APK_PATH")" >> release/version.txt
+        else
+          echo "❌ Aucun APK trouvé!"
+          echo "📁 Recherche approfondie..."
+          find . -type f -name "*.apk" 2>/dev/null || echo "Vraiment aucun APK"
           exit 1
-        }
-        echo "✅ gradlew fonctionne"
+        fi
         
-    - name: 🏗️ Build APK
-      run: |
-        echo "🚀 Construction de l'APK..."
-        
-        # Afficher la configuration
-        echo "📋 Configuration :"
-        ./gradlew projects 2>&1 | tail -20 || true
-        
-        # Construire
-        ./gradlew assembleDebug --stacktrace
-        
-        echo ""
-        echo "🔍 Recherche APK..."
-        find . -name "*.apk" -type f 2>/dev/null | while read file; do
-          echo "📦 APK trouvé : $file ($(du -h "$file" | cut -f1))"
-        done
-        
-    - name: 📦 Upload APK
+    - name: ⬆️ Upload Release
       uses: actions/upload-artifact@v4
       with:
-        name: ocr-scanner-app
-        path: |
-          app/build/outputs/apk/debug/*.apk
-          app/build/outputs/apk/**/debug/*.apk
-          **/*debug*.apk
-        if-no-files-found: error
+        name: ocr-scanner-release
+        path: release/
+        retention-days: 30
         
-    - name: 📝 Create summary
-      if: success()
+    - name: 📝 Create success page
       run: |
-        echo "# 🎉 SUCCÈS" > summary.md
-        echo "" >> summary.md
-        echo "**APK généré avec succès !**" >> summary.md
-        echo "" >> summary.md
-        echo "## 📥 Téléchargement" >> summary.md
-        echo "L'APK est disponible dans la section **Artifacts**." >> summary.md
-        echo "" >> summary.md
-        echo "### 📱 Installation" >> summary.md
-        echo "1. Téléchargez l'APK depuis Artifacts" >> summary.md
-        echo "2. Sur Android : Paramètres → Sécurité → Sources inconnues" >> summary.md
-        echo "3. Installez l'APK" >> summary.md
-        
-    - name: 📄 Upload summary
-      uses: actions/upload-artifact@v4
-      with:
-        name: instructions
-        path: summary.md
+        echo "# 🎉 OCR Scanner APK" > README-APK.md
+        echo "" >> README-APK.md
+        echo "## 📱 Application de scanner OCR avec caméra" >> README-APK.md
+        echo "" >> README-APK.md
+        echo "### ✨ Fonctionnalités" >> README-APK.md
+        echo "- 📸 Caméra en temps réel" >> README-APK.md
+        echo "- 🔍 Reconnaissance de texte (OCR)" >> README-APK.md
+        echo "- 📁 Import depuis galerie" >> README-APK.md
+        echo "- 💾 Sauvegarde des résultats" >> README-APK.md
+        echo "" >> README-APK.md
+        echo "### 📥 Installation" >> README-APK.md
+        echo "1. Téléchargez `ocr-scanner.apk` depuis Artifacts" >> README-APK.md
+        echo "2. Sur Android : **Paramètres → Sécurité → Sources inconnues**" >> README-APK.md
+        echo "3. Installez et lancez l'application" >> README-APK.md
+        echo "" >> README-APK.md
+        echo "*Build automatique avec GitHub Actions*" >> README-APK.md
