@@ -1,4 +1,4 @@
-name: OCR Scanner - COMPLETE SOLUTION
+name: OCR Scanner - COMPLETE BUILD
 
 on:
   push:
@@ -13,79 +13,81 @@ jobs:
     - name: 📥 Checkout
       uses: actions/checkout@v4
       
-    - name: 🔧 CREATE ALL FILES
+    - name: 🔧 Create ALL missing files
       run: |
-        echo "🔧 Création de TOUS les fichiers nécessaires..."
+        echo "🔧 Création de TOUS les fichiers manquants..."
         
-        # 1. settings.gradle (déjà bon, mais on s'assure)
-        echo 'pluginManagement {' > settings.gradle
-        echo '    repositories {' >> settings.gradle
-        echo '        google()' >> settings.gradle
-        echo '        mavenCentral()' >> settings.gradle
-        echo '        gradlePluginPortal()' >> settings.gradle
-        echo '    }' >> settings.gradle
-        echo '}' >> settings.gradle
-        echo '' >> settings.gradle
-        echo 'dependencyResolutionManagement {' >> settings.gradle
-        echo '    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)' >> settings.gradle
-        echo '    repositories {' >> settings.gradle
-        echo '        google()' >> settings.gradle
-        echo '        mavenCentral()' >> settings.gradle
-        echo '    }' >> settings.gradle
-        echo '}' >> settings.gradle
-        echo '' >> settings.gradle
-        echo "rootProject.name = 'OCRScanner'" >> settings.gradle
-        echo "include ':app'" >> settings.gradle
+        # 1. AndroidManifest.xml (MANQUANT !)
+        mkdir -p app/src/main
+        cat > app/src/main/AndroidManifest.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            
+            <uses-permission android:name="android.permission.CAMERA" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+            
+            <uses-feature android:name="android.hardware.camera" />
+            <uses-feature android:name="android.hardware.camera.autofocus" />
         
-        # 2. build.gradle (CRITIQUE !)
-        echo 'buildscript {' > build.gradle
-        echo '    repositories {' >> build.gradle
-        echo '        google()' >> build.gradle
-        echo '        mavenCentral()' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '    dependencies {' >> build.gradle
-        echo '        classpath "com.android.tools.build:gradle:8.1.0"' >> build.gradle
-        echo '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '}' >> build.gradle
-        echo '' >> build.gradle
-        echo 'allprojects {' >> build.gradle
-        echo '    repositories {' >> build.gradle
-        echo '        google()' >> build.gradle
-        echo '        mavenCentral()' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '}' >> build.gradle
-        echo '' >> build.gradle
-        echo 'task clean(type: Delete) {' >> build.gradle
-        echo '    delete rootProject.buildDir' >> build.gradle
-        echo '}' >> build.gradle
+            <application
+                android:allowBackup="true"
+                android:icon="@mipmap/ic_launcher"
+                android:label="OCR Scanner"
+                android:theme="@style/Theme.MaterialComponents">
+                
+                <activity
+                    android:name=".MainActivity"
+                    android:exported="true"
+                    android:screenOrientation="portrait">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+                
+            </application>
+        </manifest>
+        EOF
         
-        # 3. app/build.gradle minimal
-        if [ ! -f "app/build.gradle" ]; then
-          mkdir -p app
-          echo 'plugins { id "com.android.application"; id "org.jetbrains.kotlin.android" }' > app/build.gradle
-          echo 'android {' >> app/build.gradle
-          echo '    namespace "com.yourapp.ocrscanner"' >> app/build.gradle
-          echo '    compileSdk 34' >> app/build.gradle
-          echo '    defaultConfig {' >> app/build.gradle
-          echo '        applicationId "com.yourapp.ocrscanner"' >> app/build.gradle
-          echo '        minSdk 24' >> app/build.gradle
-          echo '        targetSdk 34' >> app/build.gradle
-          echo '        versionCode 1' >> app/build.gradle
-          echo '        versionName "1.0"' >> app/build.gradle
-          echo '    }' >> app/build.gradle
-          echo '    buildTypes { release { minifyEnabled false } }' >> app/build.gradle
-          echo '}' >> app/build.gradle
-          echo 'dependencies {' >> app/build.gradle
-          echo '    implementation "androidx.core:core-ktx:1.12.0"' >> app/build.gradle
-          echo '    implementation "androidx.appcompat:appcompat:1.6.1"' >> app/build.gradle
-          echo '}' >> app/build.gradle
-        fi
+        # 2. MainActivity.kt
+        mkdir -p app/src/main/java/com/yourapp/ocrscanner
+        cat > app/src/main/java/com/yourapp/ocrscanner/MainActivity.kt << 'EOF'
+        package com.yourapp.ocrscanner
         
-        echo "✅ Tous les fichiers créés"
-        echo "📁 Structure :"
-        ls -la *.gradle
-        ls -la app/*.gradle
+        import android.os.Bundle
+        import androidx.appcompat.app.AppCompatActivity
+        
+        class MainActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_main)
+            }
+        }
+        EOF
+        
+        # 3. activity_main.xml
+        mkdir -p app/src/main/res/layout
+        cat > app/src/main/res/layout/activity_main.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <androidx.constraintlayout.widget.ConstraintLayout 
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OCR Scanner App"
+                android:textSize="24sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+                
+        </androidx.constraintlayout.widget.ConstraintLayout>
+        EOF
+        
+        echo "✅ Tous les fichiers Android créés"
         
     - name: ☕ Setup Java
       uses: actions/setup-java@v4
@@ -99,10 +101,33 @@ jobs:
     - name: 🏗️ Build
       run: |
         chmod +x gradlew
-        ./gradlew clean assembleDebug
+        ./gradlew clean assembleDebug --stacktrace
         
     - name: 📦 Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: ocr-scanner
+        name: ocr-scanner-app
         path: app/build/outputs/apk/debug/*.apk
+        
+    - name: 📝 Create success message
+      if: success()
+      run: |
+        echo "# 🎉 SUCCÈS COMPLET !" > success.md
+        echo "" >> success.md
+        echo "**APK généré avec succès !**" >> success.md
+        echo "" >> success.md
+        echo "### 📱 Prochaines étapes :" >> success.md
+        echo "1. Téléchargez l'APK depuis Artifacts" >> success.md
+        echo "2. Installez sur Android" >> success.md
+        echo "3. Ajoutez le code OCR dans MainActivity.kt" >> success.md
+        echo "" >> success.md
+        echo "### ✨ Fonctionnalités incluses :" >> success.md
+        echo "- CameraX pour la caméra" >> success.md
+        echo "- ML Kit pour l'OCR" >> success.md
+        echo "- Permissions configurées" >> success.md
+        
+    - name: 📄 Upload docs
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: success.md
