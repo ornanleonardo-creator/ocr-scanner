@@ -1,4 +1,4 @@
-name: OCR Scanner - Simple Build
+name: OCR Scanner - COMPLETE SOLUTION
 
 on:
   push:
@@ -13,23 +13,11 @@ jobs:
     - name: 📥 Checkout
       uses: actions/checkout@v4
       
-    - name: 🔧 Create minimal files
+    - name: 🔧 CREATE ALL FILES
       run: |
-        echo "🔧 Création des fichiers minimaux..."
+        echo "🔧 Création de TOUS les fichiers nécessaires..."
         
-        # 1. build.gradle SIMPLE
-        echo 'buildscript {' > build.gradle
-        echo '    dependencies {' >> build.gradle
-        echo '        classpath "com.android.tools.build:gradle:8.1.0"' >> build.gradle
-        echo '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '}' >> build.gradle
-        echo '' >> build.gradle
-        echo 'task clean(type: Delete) {' >> build.gradle
-        echo '    delete rootProject.buildDir' >> build.gradle
-        echo '}' >> build.gradle
-        
-        # 2. settings.gradle CORRECT
+        # 1. settings.gradle (déjà bon, mais on s'assure)
         echo 'pluginManagement {' > settings.gradle
         echo '    repositories {' >> settings.gradle
         echo '        google()' >> settings.gradle
@@ -46,17 +34,36 @@ jobs:
         echo '    }' >> settings.gradle
         echo '}' >> settings.gradle
         echo '' >> settings.gradle
-        echo 'rootProject.name = "OCRScanner"' >> settings.gradle
-        echo 'include '\'':app'\' >> settings.gradle
+        echo "rootProject.name = 'OCRScanner'" >> settings.gradle
+        echo "include ':app'" >> settings.gradle
         
-        # 3. app/build.gradle si manquant
+        # 2. build.gradle (CRITIQUE !)
+        echo 'buildscript {' > build.gradle
+        echo '    repositories {' >> build.gradle
+        echo '        google()' >> build.gradle
+        echo '        mavenCentral()' >> build.gradle
+        echo '    }' >> build.gradle
+        echo '    dependencies {' >> build.gradle
+        echo '        classpath "com.android.tools.build:gradle:8.1.0"' >> build.gradle
+        echo '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"' >> build.gradle
+        echo '    }' >> build.gradle
+        echo '}' >> build.gradle
+        echo '' >> build.gradle
+        echo 'allprojects {' >> build.gradle
+        echo '    repositories {' >> build.gradle
+        echo '        google()' >> build.gradle
+        echo '        mavenCentral()' >> build.gradle
+        echo '    }' >> build.gradle
+        echo '}' >> build.gradle
+        echo '' >> build.gradle
+        echo 'task clean(type: Delete) {' >> build.gradle
+        echo '    delete rootProject.buildDir' >> build.gradle
+        echo '}' >> build.gradle
+        
+        # 3. app/build.gradle minimal
         if [ ! -f "app/build.gradle" ]; then
           mkdir -p app
-          echo 'plugins {' > app/build.gradle
-          echo '    id "com.android.application"' >> app/build.gradle
-          echo '    id "org.jetbrains.kotlin.android"' >> app/build.gradle
-          echo '}' >> app/build.gradle
-          echo '' >> app/build.gradle
+          echo 'plugins { id "com.android.application"; id "org.jetbrains.kotlin.android" }' > app/build.gradle
           echo 'android {' >> app/build.gradle
           echo '    namespace "com.yourapp.ocrscanner"' >> app/build.gradle
           echo '    compileSdk 34' >> app/build.gradle
@@ -67,20 +74,18 @@ jobs:
           echo '        versionCode 1' >> app/build.gradle
           echo '        versionName "1.0"' >> app/build.gradle
           echo '    }' >> app/build.gradle
-          echo '    buildTypes {' >> app/build.gradle
-          echo '        release {' >> app/build.gradle
-          echo '            minifyEnabled false' >> app/build.gradle
-          echo '        }' >> app/build.gradle
-          echo '    }' >> app/build.gradle
+          echo '    buildTypes { release { minifyEnabled false } }' >> app/build.gradle
           echo '}' >> app/build.gradle
-          echo '' >> app/build.gradle
           echo 'dependencies {' >> app/build.gradle
           echo '    implementation "androidx.core:core-ktx:1.12.0"' >> app/build.gradle
           echo '    implementation "androidx.appcompat:appcompat:1.6.1"' >> app/build.gradle
           echo '}' >> app/build.gradle
         fi
         
-        echo "✅ Fichiers créés"
+        echo "✅ Tous les fichiers créés"
+        echo "📁 Structure :"
+        ls -la *.gradle
+        ls -la app/*.gradle
         
     - name: ☕ Setup Java
       uses: actions/setup-java@v4
@@ -96,8 +101,8 @@ jobs:
         chmod +x gradlew
         ./gradlew clean assembleDebug
         
-    - name: 📦 Upload
+    - name: 📦 Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: ocr-apk
+        name: ocr-scanner
         path: app/build/outputs/apk/debug/*.apk
