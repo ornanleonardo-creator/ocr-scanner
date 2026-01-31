@@ -2,44 +2,82 @@ name: Build OCR Scanner APK
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:  # Permet de builder manuellement
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
       
-    - name: Setup JDK 17
-      uses: actions/setup-java@v3
+    - name: ☕ Setup JDK 17
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         
-    - name: Setup Android SDK
+    - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: Make gradlew executable
+    - name: 🔧 Make gradlew executable
       run: chmod +x gradlew
       
-    - name: Build APK
-      run: |
-        ./gradlew assembleDebug
-        ./gradlew assembleRelease
-        
-    - name: Upload APK Files
-      uses: actions/upload-artifact@v3
+    - name: 💾 Cache Gradle dependencies
+      uses: actions/cache@v4
       with:
-        name: ocr-scanner-apk
         path: |
-          app/build/outputs/apk/debug/*.apk
-          app/build/outputs/apk/release/*-unsigned.apk
-        retention-days: 90
-        
-    - name: Generate Download Link
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ hashFiles('**/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-
+          
+    - name: 🏗️ Build Debug APK
       run: |
-        echo "📱 APK disponible dans l'onglet Actions > Artifacts"
-        echo "🔗 Ou télécharger directement après le build"
+        ./gradlew assembleDebug --no-daemon
+        
+    - name: 📦 Upload Debug APK
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: OCR-Scanner-Debug
+        path: app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 7
+        
+    - name: 📝 Generate APK Info
+      if: success()
+      run: |
+        echo "# 📱 OCR Scanner APK" > README-APK.md
+        echo "" >> README-APK.md
+        echo "## 📋 Informations" >> README-APK.md
+        echo "- **Version:** 1.0.0" >> README-APK.md
+        echo "- **Date:** $(date '+%Y-%m-%d %H:%M:%S')" >> README-APK.md
+        echo "- **Commit:** ${{ github.sha }}" >> README-APK.md
+        echo "" >> README-APK.md
+        echo "## 📲 Installation" >> README-APK.md
+        echo "1. Téléchargez `app-debug.apk` depuis Artifacts" >> README-APK.md
+        echo "2. Sur Android :" >> README-APK.md
+        echo "   - Allez dans **Paramètres → Sécurité**" >> README-APK.md
+        echo "   - Activez **Sources inconnues**" >> README-APK.md
+        echo "   - Installez l'APK" >> README-APK.md
+        echo "" >> README-APK.md
+        echo "## ✨ Fonctionnalités" >> README-APK.md
+        echo "- 📸 Camera en temps réel" >> README-APK.md
+        echo "- 🔍 Reconnaissance de texte (OCR)" >> README-APK.md
+        echo "- 📁 Import depuis galerie" >> README-APK.md
+        echo "- 💾 Sauvegarde du texte" >> README-APK.md
+        
+    - name: 📄 Upload APK Info
+      uses: actions/upload-artifact@v4
+      with:
+        name: Documentation
+        path: README-APK.md
+        retention-days: 7
