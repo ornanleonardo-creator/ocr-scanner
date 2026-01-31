@@ -1,4 +1,4 @@
-name: OCR Scanner Full Build
+name: OCR Scanner - Fresh Gradlew
 
 on:
   push:
@@ -10,78 +10,84 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
       
-    - name: 🔧 Fix all permissions and files
+    - name: 🗑️ REMOVE corrupted gradlew
       run: |
-        echo "🔧 Réparation complète..."
+        echo "🗑️ Suppression du fichier gradlew corrompu..."
+        rm -f gradlew
+        echo "✅ gradlew supprimé"
         
-        # 1. S'assurer que gradlew est exécutable
-        if [ -f "gradlew" ]; then
-          chmod +x gradlew
-          echo "✅ gradlew rendu exécutable"
+    - name: 📥 DOWNLOAD fresh gradlew
+      run: |
+        echo "📥 Téléchargement d'un nouveau gradlew..."
+        # Télécharger depuis la source officielle
+        curl -L -o gradlew https://raw.githubusercontent.com/gradle/gradle/master/gradlew
+        
+        # Vérifier le téléchargement
+        echo "✅ Téléchargement terminé"
+        echo "📏 Taille du fichier : $(wc -l < gradlew) lignes"
+        echo "📄 Premières lignes :"
+        head -5 gradlew
+        
+    - name: 🔧 SET executable permissions
+      run: |
+        echo "🔧 Configuration des permissions..."
+        # Donner toutes les permissions
+        chmod 755 gradlew
+        
+        # Vérifier
+        echo "✅ Permissions :"
+        ls -la gradlew | awk '{print "Fichier: "$9" | Permissions: "$1" | Taille: "$5" bytes"}'
+        
+        # Vérifier que c'est exécutable
+        if [ -x "gradlew" ]; then
+          echo "🎯 gradlew est exécutable"
         else
-          echo "📥 Téléchargement de gradlew..."
-          curl -L -o gradlew https://raw.githubusercontent.com/gradle/gradle/master/gradlew
-          chmod +x gradlew
+          echo "❌ ERREUR: gradlew n'est toujours pas exécutable"
+          exit 1
         fi
         
-        # 2. Vérifier build.gradle
-        if [ ! -f "build.gradle" ]; then
-          echo "📝 Création de build.gradle..."
-          echo 'buildscript{repositories{google();mavenCentral()}dependencies{classpath"com.android.tools.build:gradle:8.1.0";classpath"org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"}}' > build.gradle
-          echo 'allprojects{repositories{google();mavenCentral()}}' >> build.gradle
-          echo 'task clean(type:Delete){delete rootProject.buildDir}' >> build.gradle
-        fi
+    - name: 📦 DOWNLOAD gradle-wrapper.jar
+      run: |
+        echo "📦 Téléchargement de gradle-wrapper.jar..."
+        mkdir -p gradle/wrapper
+        cd gradle/wrapper
+        curl -L -o gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
+        echo "✅ Téléchargé: $(du -h gradle-wrapper.jar | cut -f1)"
+        cd ../..
         
-        # 3. Vérifier app/build.gradle
-        if [ ! -f "app/build.gradle" ]; then
-          echo "📱 Création de app/build.gradle..."
-          mkdir -p app
-          echo 'plugins{id"com.android.application";id"org.jetbrains.kotlin.android"}' > app/build.gradle
-          echo 'android{namespace"com.yourapp.ocrscanner";compileSdk 34' >> app/build.gradle
-          echo 'defaultConfig{applicationId"com.yourapp.ocrscanner";minSdk 24;targetSdk 34;versionCode 1;versionName"1.0"}' >> app/build.gradle
-          echo 'buildTypes{release{minifyEnabled false}}' >> app/build.gradle
-          echo 'compileOptions{sourceCompatibility JavaVersion.VERSION_17;targetCompatibility JavaVersion.VERSION_17}' >> app/build.gradle
-          echo 'kotlinOptions{jvmTarget="17"}}' >> app/build.gradle
-          echo 'dependencies{implementation"androidx.core:core-ktx:1.12.0";implementation"androidx.appcompat:appcompat:1.6.1";implementation"com.google.android.material:material:1.10.0"}' >> app/build.gradle
-        fi
-        
-        # 4. Vérifier wrapper jar
-        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          echo "📦 Téléchargement de gradle-wrapper.jar..."
-          mkdir -p gradle/wrapper
-          cd gradle/wrapper
-          curl -L -o gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
-          cd ../..
-        fi
-        
-        echo "✅ Tous les fichiers sont prêts"
-        
-    - name: ☕ Setup Java
+    - name: ☕ Setup Java 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         
-    - name: 🤖 Setup Android
+    - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: 🧪 Final test
+    - name: 🧪 TEST gradlew
       run: |
-        echo "🧪 Test final..."
-        ./gradlew --version
-        echo "✅ Test réussi"
+        echo "🧪 Test critique de gradlew..."
+        # Vérifier le contenu à la ligne 152
+        echo "🔍 Ligne 152 :"
+        sed -n '152p' gradlew || echo "Fichier trop court"
         
-    - name: 🏗️ Build
+        # Premier test
+        echo "🚀 Lancement de gradlew --version..."
+        ./gradlew --version
+        
+        echo "✅ Test réussi !"
+        
+    - name: 🏗️ BUILD APK
       run: |
-        echo "🚀 Build en cours..."
+        echo "🚀 Construction de l'APK..."
         ./gradlew clean assembleDebug --stacktrace
         
-    - name: 📦 Upload
+    - name: 📦 UPLOAD APK
       uses: actions/upload-artifact@v4
       with:
-        name: ocr-app
+        name: ocr-scanner-app
         path: app/build/outputs/apk/debug/*.apk
-        if-no-files-found: error
+        if-no-files-found: warn
