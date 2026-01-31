@@ -1,4 +1,4 @@
-name: OCR Scanner - Gradle 8 Fix
+name: OCR Scanner - Simple Build
 
 on:
   push:
@@ -13,77 +13,74 @@ jobs:
     - name: 📥 Checkout
       uses: actions/checkout@v4
       
-    - name: 🔧 Fix Gradle 8 configuration
+    - name: 🔧 Create minimal files
       run: |
-        echo "🔧 Configuration pour Gradle 8..."
+        echo "🔧 Création des fichiers minimaux..."
         
-        # 1. build.gradle SIMPLE (sans repositories)
-        cat > build.gradle << 'EOF'
-        buildscript {
-            dependencies {
-                classpath 'com.android.tools.build:gradle:8.1.0'
-                classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0'
-            }
-        }
-        
-        task clean(type: Delete) {
-            delete rootProject.buildDir
-        }
-        EOF
+        # 1. build.gradle SIMPLE
+        echo 'buildscript {' > build.gradle
+        echo '    dependencies {' >> build.gradle
+        echo '        classpath "com.android.tools.build:gradle:8.1.0"' >> build.gradle
+        echo '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"' >> build.gradle
+        echo '    }' >> build.gradle
+        echo '}' >> build.gradle
+        echo '' >> build.gradle
+        echo 'task clean(type: Delete) {' >> build.gradle
+        echo '    delete rootProject.buildDir' >> build.gradle
+        echo '}' >> build.gradle
         
         # 2. settings.gradle CORRECT
-        cat > settings.gradle << 'EOF'
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-        dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
+        echo 'pluginManagement {' > settings.gradle
+        echo '    repositories {' >> settings.gradle
+        echo '        google()' >> settings.gradle
+        echo '        mavenCentral()' >> settings.gradle
+        echo '        gradlePluginPortal()' >> settings.gradle
+        echo '    }' >> settings.gradle
+        echo '}' >> settings.gradle
+        echo '' >> settings.gradle
+        echo 'dependencyResolutionManagement {' >> settings.gradle
+        echo '    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)' >> settings.gradle
+        echo '    repositories {' >> settings.gradle
+        echo '        google()' >> settings.gradle
+        echo '        mavenCentral()' >> settings.gradle
+        echo '    }' >> settings.gradle
+        echo '}' >> settings.gradle
+        echo '' >> settings.gradle
+        echo 'rootProject.name = "OCRScanner"' >> settings.gradle
+        echo 'include '\'':app'\' >> settings.gradle
         
-        rootProject.name = "OCRScanner"
-        include ':app'
-        EOF
-        
-        # 3. app/build.gradle de base
+        # 3. app/build.gradle si manquant
         if [ ! -f "app/build.gradle" ]; then
           mkdir -p app
-          cat > app/build.gradle << 'APP'
-          plugins {
-              id 'com.android.application'
-              id 'org.jetbrains.kotlin.android'
-          }
-          android {
-              namespace 'com.yourapp.ocrscanner'
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.yourapp.ocrscanner"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
-              }
-          }
-          dependencies {
-              implementation 'androidx.core:core-ktx:1.12.0'
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-          }
-          APP
+          echo 'plugins {' > app/build.gradle
+          echo '    id "com.android.application"' >> app/build.gradle
+          echo '    id "org.jetbrains.kotlin.android"' >> app/build.gradle
+          echo '}' >> app/build.gradle
+          echo '' >> app/build.gradle
+          echo 'android {' >> app/build.gradle
+          echo '    namespace "com.yourapp.ocrscanner"' >> app/build.gradle
+          echo '    compileSdk 34' >> app/build.gradle
+          echo '    defaultConfig {' >> app/build.gradle
+          echo '        applicationId "com.yourapp.ocrscanner"' >> app/build.gradle
+          echo '        minSdk 24' >> app/build.gradle
+          echo '        targetSdk 34' >> app/build.gradle
+          echo '        versionCode 1' >> app/build.gradle
+          echo '        versionName "1.0"' >> app/build.gradle
+          echo '    }' >> app/build.gradle
+          echo '    buildTypes {' >> app/build.gradle
+          echo '        release {' >> app/build.gradle
+          echo '            minifyEnabled false' >> app/build.gradle
+          echo '        }' >> app/build.gradle
+          echo '    }' >> app/build.gradle
+          echo '}' >> app/build.gradle
+          echo '' >> app/build.gradle
+          echo 'dependencies {' >> app/build.gradle
+          echo '    implementation "androidx.core:core-ktx:1.12.0"' >> app/build.gradle
+          echo '    implementation "androidx.appcompat:appcompat:1.6.1"' >> app/build.gradle
+          echo '}' >> app/build.gradle
         fi
         
-        echo "✅ Configuration Gradle 8 prête"
+        echo "✅ Fichiers créés"
         
     - name: ☕ Setup Java
       uses: actions/setup-java@v4
@@ -94,14 +91,9 @@ jobs:
     - name: 🤖 Setup Android
       uses: android-actions/setup-android@v3
       
-    - name: 🧪 Test
-      run: |
-        chmod +x gradlew
-        ./gradlew --version
-        
     - name: 🏗️ Build
       run: |
-        echo "🚀 Build avec Gradle 8..."
+        chmod +x gradlew
         ./gradlew clean assembleDebug
         
     - name: 📦 Upload
