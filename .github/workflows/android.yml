@@ -1,45 +1,134 @@
-name: Simple Android Build
+name: Android OCR Scanner Build
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Java
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: ☕ Setup Java 17
       uses: actions/setup-java@v4
       with:
-        distribution: 'temurin'
         java-version: '17'
+        distribution: 'temurin'
         
-    - name: Setup Android SDK
+    - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: Check and fix project structure
+    - name: 🔧 Configure project
       run: |
-        # Vérifier la structure
-        echo "Structure actuelle:"
-        find . -type f -name "*.gradle" -o -name "*.kt" -o -name "*.xml" | sort
+        chmod +x gradlew
         
-        # S'assurer que gradlew est exécutable
-        if [ -f "gradlew" ]; then
-          chmod +x gradlew
-          echo "gradlew rendu exécutable"
+        # Vérifier la configuration
+        echo "🔍 Configuration du projet :"
+        ./gradlew projects || true
+        echo ""
+        echo "📱 Variants disponibles :"
+        ./gradlew tasks --group="build" | grep assemble || true
+        
+    - name: 🏗️ Build with debug
+      run: |
+        echo "🚀 Démarrage du build..."
+        
+        # Nettoyer d'abord
+        ./gradlew clean || true
+        
+        # Construire debug APK avec infos détaillées
+        ./gradlew assembleDebug --info --stacktrace
+        
+        # Vérifier le résultat
+        echo ""
+        echo "📋 Résultat du build :"
+        if [ -d "app/build/outputs/apk" ]; then
+          echo "✅ Dossier APK trouvé"
+          find app/build/outputs/apk -type f -name "*.apk" | while read file; do
+            echo "📄 APK: $file ($(du -h "$file" | cut -f1))"
+          done
         else
-          echo "gradlew non trouvé"
+          echo "❌ Dossier APK non trouvé"
+          echo "Structure de app/build :"
+          find app/build -type d 2>/dev/null | head -20
         fi
         
-    - name: Build APK
+    - name: 📦 Find and upload APK
       run: |
-        echo "Tentative de build..."
-        ./gradlew assembleDebug || echo "Build échoué, vérifiez la structure"
+        # Chercher l'APK debug
+        APK_PATH=""
         
-    - name: Upload APK if exists
+        # Essayer différents chemins
+        for path in \
+          "app/build/outputs/apk/debug/*.apk" \
+          "app/build/outputs/apk/**/debug/*.apk" \
+          "app/build/intermediates/apk/debug/*.apk" \
+          "app/build/**/*debug*.apk"; do
+          
+          if ls $path 1>/dev/null 2>&1; then
+            APK_PATH=$(ls $path | head -1)
+            echo "✅ APK trouvé : $APK_PATH"
+            break
+          fi
+        done
+        
+        if [ -z "$APK_PATH" ]; then
+          echo "⚠️ APK non trouvé par pattern, recherche complète..."
+          APK_PATH=$(find . -name "*debug*.apk" -type f | head -1)
+        fi
+        
+        if [ -n "$APK_PATH" ]; then
+          echo "🎯 APK à uploader : $APK_PATH"
+          # Créer un lien symbolique pour un chemin fixe
+          mkdir -p upload-apk
+          cp "$APK_PATH" upload-apk/app-debug.apk
+          echo "✅ APK prêt pour upload"
+        else
+          echo "❌ Aucun APK trouvé"
+          echo "Structure complète :"
+          find . -type f -name "*.apk" 2>/dev/null || true
+          exit 1
+        fi
+        
+    - name: ⬆️ Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: apk-file
-        path: app/build/outputs/apk/debug/*.apk
-        if-no-files-found: warn
+        name: ocr-scanner-app
+        path: upload-apk/app-debug.apk
+        if-no-files-found: error
+        retention-days: 7
+        
+    - name: 📝 Create summary
+      if: always()
+      run: |
+        echo "# 🏗️ Résultat du Build" > summary.md
+        echo "" >> summary.md
+        echo "**Date:** $(date)" >> summary.md
+        echo "**Commit:** ${{ github.sha }}" >> summary.md
+        echo "" >> summary.md
+        
+        if [ -f "upload-apk/app-debug.apk" ]; then
+          echo "## ✅ SUCCÈS" >> summary.md
+          echo "APK généré avec succès !" >> summary.md
+          echo "" >> summary.md
+          echo "### 📥 Téléchargement" >> summary.md
+          echo "L'APK est disponible dans la section **Artifacts**." >> summary.md
+        else
+          echo "## ❌ ÉCHEC" >> summary.md
+          echo "Aucun APK généré." >> summary.md
+          echo "" >> summary.md
+          echo "### 🔧 Dépannage" >> summary.md
+          echo "1. Vérifiez la configuration Gradle" >> summary.md
+          echo "2. Vérifiez les dépendances Android" >> summary.md
+          echo "3. Consultez les logs de build" >> summary.md
+        fi
+        
+    - name: 📄 Upload summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-summary
+        path: summary.md
