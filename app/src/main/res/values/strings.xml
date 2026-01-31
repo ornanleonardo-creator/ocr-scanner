@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">OCR Scanner</string>
+    <string name="hint_result">Texte extrait...</string>
+    <string name="btn_capture">Capturer</string>
+    <string name="btn_gallery">Galerie</string>
+    <string name="btn_save">Sauvegarder</string>
+</resources>
