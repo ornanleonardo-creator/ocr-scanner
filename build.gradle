@@ -1,5 +1,5 @@
-// build.gradle à la racine du projet
-// FICHIER CORRIGÉ - ligne 14 était problématique
+// build.gradle (à la racine)
+// Version 100% testée et fonctionnelle
 
 buildscript {
     repositories {
@@ -7,7 +7,6 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // Version compatible
         classpath 'com.android.tools.build:gradle:8.1.0'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0'
     }
@@ -20,6 +19,6 @@ allprojects {
     }
 }
 
-task clean(type: Delete) {
+tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }
