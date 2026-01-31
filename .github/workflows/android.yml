@@ -1,0 +1,45 @@
+name: Build OCR Scanner APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Permet de builder manuellement
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+      
+    - name: Build APK
+      run: |
+        ./gradlew assembleDebug
+        ./gradlew assembleRelease
+        
+    - name: Upload APK Files
+      uses: actions/upload-artifact@v3
+      with:
+        name: ocr-scanner-apk
+        path: |
+          app/build/outputs/apk/debug/*.apk
+          app/build/outputs/apk/release/*-unsigned.apk
+        retention-days: 90
+        
+    - name: Generate Download Link
+      run: |
+        echo "📱 APK disponible dans l'onglet Actions > Artifacts"
+        echo "🔗 Ou télécharger directement après le build"
