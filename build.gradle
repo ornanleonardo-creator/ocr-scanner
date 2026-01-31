@@ -1,13 +1,15 @@
-// Top-level build file
+// build.gradle à la racine du projet
+// FICHIER CORRIGÉ - ligne 14 était problématique
+
 buildscript {
-    ext.kotlin_version = '1.9.0'
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
+        // Version compatible
         classpath 'com.android.tools.build:gradle:8.1.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0'
     }
 }
 
