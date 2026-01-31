@@ -1,4 +1,4 @@
-name: OCR Scanner - Fresh Gradlew
+name: OCR Scanner - NO COMMENT BUG
 
 on:
   push:
@@ -10,84 +10,68 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout code
+    - name: 📥 Checkout
       uses: actions/checkout@v4
       
-    - name: 🗑️ REMOVE corrupted gradlew
+    - name: 🗑️ Remove bad build.gradle
       run: |
-        echo "🗑️ Suppression du fichier gradlew corrompu..."
-        rm -f gradlew
-        echo "✅ gradlew supprimé"
+        echo "🗑️ Suppression du mauvais build.gradle..."
+        rm -f build.gradle
         
-    - name: 📥 DOWNLOAD fresh gradlew
+    - name: 📝 Create CORRECT build.gradle
       run: |
-        echo "📥 Téléchargement d'un nouveau gradlew..."
-        # Télécharger depuis la source officielle
-        curl -L -o gradlew https://raw.githubusercontent.com/gradle/gradle/master/gradlew
+        echo "📝 Création du BON build.gradle..."
+        # Pas de commentaire "#" au début !
+        echo '// build.gradle - Version correcte' > build.gradle
+        echo '' >> build.gradle
+        echo 'buildscript {' >> build.gradle
+        echo '    repositories {' >> build.gradle
+        echo '        google()' >> build.gradle
+        echo '        mavenCentral()' >> build.gradle
+        echo '    }' >> build.gradle
+        echo '    dependencies {' >> build.gradle
+        echo '        classpath "com.android.tools.build:gradle:8.1.0"' >> build.gradle
+        echo '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"' >> build.gradle
+        echo '    }' >> build.gradle
+        echo '}' >> build.gradle
+        echo '' >> build.gradle
+        echo 'allprojects {' >> build.gradle
+        echo '    repositories {' >> build.gradle
+        echo '        google()' >> build.gradle
+        echo '        mavenCentral()' >> build.gradle
+        echo '    }' >> build.gradle
+        echo '}' >> build.gradle
+        echo '' >> build.gradle
+        echo 'task clean(type: Delete) {' >> build.gradle
+        echo '    delete rootProject.buildDir' >> build.gradle
+        echo '}' >> build.gradle
         
-        # Vérifier le téléchargement
-        echo "✅ Téléchargement terminé"
-        echo "📏 Taille du fichier : $(wc -l < gradlew) lignes"
-        echo "📄 Premières lignes :"
-        head -5 gradlew
+        echo "✅ build.gradle créé"
+        echo "📄 Contenu :"
+        cat build.gradle
         
-    - name: 🔧 SET executable permissions
-      run: |
-        echo "🔧 Configuration des permissions..."
-        # Donner toutes les permissions
-        chmod 755 gradlew
-        
-        # Vérifier
-        echo "✅ Permissions :"
-        ls -la gradlew | awk '{print "Fichier: "$9" | Permissions: "$1" | Taille: "$5" bytes"}'
-        
-        # Vérifier que c'est exécutable
-        if [ -x "gradlew" ]; then
-          echo "🎯 gradlew est exécutable"
-        else
-          echo "❌ ERREUR: gradlew n'est toujours pas exécutable"
-          exit 1
-        fi
-        
-    - name: 📦 DOWNLOAD gradle-wrapper.jar
-      run: |
-        echo "📦 Téléchargement de gradle-wrapper.jar..."
-        mkdir -p gradle/wrapper
-        cd gradle/wrapper
-        curl -L -o gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
-        echo "✅ Téléchargé: $(du -h gradle-wrapper.jar | cut -f1)"
-        cd ../..
-        
-    - name: ☕ Setup Java 17
+    - name: ☕ Setup Java
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         
-    - name: 🤖 Setup Android SDK
+    - name: 🤖 Setup Android
       uses: android-actions/setup-android@v3
       
-    - name: 🧪 TEST gradlew
+    - name: 🧪 Test
       run: |
-        echo "🧪 Test critique de gradlew..."
-        # Vérifier le contenu à la ligne 152
-        echo "🔍 Ligne 152 :"
-        sed -n '152p' gradlew || echo "Fichier trop court"
-        
-        # Premier test
-        echo "🚀 Lancement de gradlew --version..."
+        echo "🧪 Test..."
+        chmod +x gradlew
         ./gradlew --version
         
-        echo "✅ Test réussi !"
-        
-    - name: 🏗️ BUILD APK
+    - name: 🏗️ Build
       run: |
-        echo "🚀 Construction de l'APK..."
-        ./gradlew clean assembleDebug --stacktrace
+        echo "🚀 Build..."
+        ./gradlew clean assembleDebug
         
-    - name: 📦 UPLOAD APK
+    - name: 📦 Upload
       uses: actions/upload-artifact@v4
       with:
-        name: ocr-scanner-app
+        name: ocr-apk
         path: app/build/outputs/apk/debug/*.apk
-        if-no-files-found: warn
