@@ -1,4 +1,4 @@
-name: Build OCR Scanner - FINAL FIX
+name: OCR Scanner Full Build
 
 on:
   push:
@@ -10,92 +10,54 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout code
+    - name: 📥 Checkout
       uses: actions/checkout@v4
       
-    - name: 🗑️ Clean problematic files
+    - name: 🔧 Fix all permissions and files
       run: |
-        echo "🧹 Nettoyage des fichiers problématiques..."
-        # Supprimer build.gradle s'il existe
-        rm -f build.gradle
-        echo "✅ Fichiers nettoyés"
+        echo "🔧 Réparation complète..."
         
-    - name: 🆕 Create clean build.gradle
-      run: |
-        echo "📝 Création de build.gradle..."
-        # Écrire le fichier ligne par ligne (pas de here-doc)
-        echo 'buildscript {' > build.gradle
-        echo '    repositories {' >> build.gradle
-        echo '        google()' >> build.gradle
-        echo '        mavenCentral()' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '    dependencies {' >> build.gradle
-        echo '        classpath "com.android.tools.build:gradle:8.1.0"' >> build.gradle
-        echo '        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '}' >> build.gradle
-        echo '' >> build.gradle
-        echo 'allprojects {' >> build.gradle
-        echo '    repositories {' >> build.gradle
-        echo '        google()' >> build.gradle
-        echo '        mavenCentral()' >> build.gradle
-        echo '    }' >> build.gradle
-        echo '}' >> build.gradle
-        echo '' >> build.gradle
-        echo 'task clean(type: Delete) {' >> build.gradle
-        echo '    delete rootProject.buildDir' >> build.gradle
-        echo '}' >> build.gradle
+        # 1. S'assurer que gradlew est exécutable
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
+          echo "✅ gradlew rendu exécutable"
+        else
+          echo "📥 Téléchargement de gradlew..."
+          curl -L -o gradlew https://raw.githubusercontent.com/gradle/gradle/master/gradlew
+          chmod +x gradlew
+        fi
         
-        echo "✅ build.gradle créé"
-        cat build.gradle
+        # 2. Vérifier build.gradle
+        if [ ! -f "build.gradle" ]; then
+          echo "📝 Création de build.gradle..."
+          echo 'buildscript{repositories{google();mavenCentral()}dependencies{classpath"com.android.tools.build:gradle:8.1.0";classpath"org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"}}' > build.gradle
+          echo 'allprojects{repositories{google();mavenCentral()}}' >> build.gradle
+          echo 'task clean(type:Delete){delete rootProject.buildDir}' >> build.gradle
+        fi
         
-    - name: 📱 Create app/build.gradle
-      run: |
-        echo "📱 Création de app/build.gradle..."
-        mkdir -p app
+        # 3. Vérifier app/build.gradle
+        if [ ! -f "app/build.gradle" ]; then
+          echo "📱 Création de app/build.gradle..."
+          mkdir -p app
+          echo 'plugins{id"com.android.application";id"org.jetbrains.kotlin.android"}' > app/build.gradle
+          echo 'android{namespace"com.yourapp.ocrscanner";compileSdk 34' >> app/build.gradle
+          echo 'defaultConfig{applicationId"com.yourapp.ocrscanner";minSdk 24;targetSdk 34;versionCode 1;versionName"1.0"}' >> app/build.gradle
+          echo 'buildTypes{release{minifyEnabled false}}' >> app/build.gradle
+          echo 'compileOptions{sourceCompatibility JavaVersion.VERSION_17;targetCompatibility JavaVersion.VERSION_17}' >> app/build.gradle
+          echo 'kotlinOptions{jvmTarget="17"}}' >> app/build.gradle
+          echo 'dependencies{implementation"androidx.core:core-ktx:1.12.0";implementation"androidx.appcompat:appcompat:1.6.1";implementation"com.google.android.material:material:1.10.0"}' >> app/build.gradle
+        fi
         
-        # Créer le fichier ligne par ligne
-        echo 'plugins {' > app/build.gradle
-        echo '    id "com.android.application"' >> app/build.gradle
-        echo '    id "org.jetbrains.kotlin.android"' >> app/build.gradle
-        echo '}' >> app/build.gradle
-        echo '' >> app/build.gradle
-        echo 'android {' >> app/build.gradle
-        echo '    namespace "com.yourapp.ocrscanner"' >> app/build.gradle
-        echo '    compileSdk 34' >> app/build.gradle
-        echo '' >> app/build.gradle
-        echo '    defaultConfig {' >> app/build.gradle
-        echo '        applicationId "com.yourapp.ocrscanner"' >> app/build.gradle
-        echo '        minSdk 24' >> app/build.gradle
-        echo '        targetSdk 34' >> app/build.gradle
-        echo '        versionCode 1' >> app/build.gradle
-        echo '        versionName "1.0"' >> app/build.gradle
-        echo '    }' >> app/build.gradle
-        echo '' >> app/build.gradle
-        echo '    buildTypes {' >> app/build.gradle
-        echo '        release {' >> app/build.gradle
-        echo '            minifyEnabled false' >> app/build.gradle
-        echo '            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"' >> app/build.gradle
-        echo '        }' >> app/build.gradle
-        echo '    }' >> app/build.gradle
-        echo '' >> app/build.gradle
-        echo '    compileOptions {' >> app/build.gradle
-        echo '        sourceCompatibility JavaVersion.VERSION_17' >> app/build.gradle
-        echo '        targetCompatibility JavaVersion.VERSION_17' >> app/build.gradle
-        echo '    }' >> app/build.gradle
-        echo '' >> app/build.gradle
-        echo '    kotlinOptions {' >> app/build.gradle
-        echo '        jvmTarget = "17"' >> app/build.gradle
-        echo '    }' >> app/build.gradle
-        echo '}' >> app/build.gradle
-        echo '' >> app/build.gradle
-        echo 'dependencies {' >> app/build.gradle
-        echo '    implementation "androidx.core:core-ktx:1.12.0"' >> app/build.gradle
-        echo '    implementation "androidx.appcompat:appcompat:1.6.1"' >> app/build.gradle
-        echo '    implementation "com.google.android.material:material:1.10.0"' >> app/build.gradle
-        echo '}' >> app/build.gradle
+        # 4. Vérifier wrapper jar
+        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "📦 Téléchargement de gradle-wrapper.jar..."
+          mkdir -p gradle/wrapper
+          cd gradle/wrapper
+          curl -L -o gradle-wrapper.jar https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar
+          cd ../..
+        fi
         
-        echo "✅ app/build.gradle créé"
+        echo "✅ Tous les fichiers sont prêts"
         
     - name: ☕ Setup Java
       uses: actions/setup-java@v4
@@ -106,19 +68,20 @@ jobs:
     - name: 🤖 Setup Android
       uses: android-actions/setup-android@v3
       
-    - name: 🛠️ Make gradlew executable
+    - name: 🧪 Final test
       run: |
-        chmod +x gradlew
-        echo "✅ gradlew rendu exécutable"
+        echo "🧪 Test final..."
+        ./gradlew --version
+        echo "✅ Test réussi"
         
-    - name: 🏗️ Build APK
+    - name: 🏗️ Build
       run: |
-        echo "🚀 Démarrage du build..."
+        echo "🚀 Build en cours..."
         ./gradlew clean assembleDebug --stacktrace
         
-    - name: 📦 Upload APK
+    - name: 📦 Upload
       uses: actions/upload-artifact@v4
       with:
-        name: ocr-scanner-app
+        name: ocr-app
         path: app/build/outputs/apk/debug/*.apk
-        if-no-files-found: warn
+        if-no-files-found: error
